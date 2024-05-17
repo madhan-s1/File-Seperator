@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Function to prompt for and read input
+prompt_for_input() {
+  local prompt_message=$1
+  read -p "$prompt_message: " input_value
+  echo $input_value
+}
+
+# Prompt for and read all required parameters
+username=$(prompt_for_input "Enter the username")
+password=$(prompt_for_input "Enter the password")
+tenant=$(prompt_for_input "Enter the tenant")
+resource_group=$(prompt_for_input "Enter the resource group")
+account_name=$(prompt_for_input "Enter the account name")
+subscription=$(prompt_for_input "Enter the subscription")
+
+# Execute the commands with the provided parameters
+az login --service-principal --username $username --password $password --tenant $tenant
+
+az account set --subscription $subscription
+
+az account show
+
+az storage account keys list --account-name $account_name
+
+echo "Pause for 5 minutes"
+sleep 300
+
+az storage account keys renew --resource-group $resource_group --account-name $account_name --key key1
+
+echo "Pause for 5 minutes"
+sleep 300
+
+az storage account keys renew --resource-group $resource_group --account-name $account_name --key key2
+
+az logout
