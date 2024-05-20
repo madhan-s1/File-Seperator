@@ -1,0 +1,87 @@
+'''
+*********************************************USER DEFINED VARIABLES***************************************
+'''
+def BUILD_TOOL = "maven"
+def JENKINS_NOTIFICATIONS_TO="Dl-@voya.com"
+'''
+*********************************************USER DEFINED VARIABLES***************************************
+'''
+
+pipeline {
+    agent {
+        label 'PSHKLAAC9855'
+    }	
+    tools {
+        maven 'apache-maven-3.3.3'
+        jdk 'jdk1.8.0_45'
+    }
+   environment {
+            REG_CRED = credentials('5de4db88-206f-45c8-b80b-c0f4e440c486')
+	    APP_IMAGE_NAME= "${JOB_NAME}"
+            APP_IMAGE= APP_IMAGE_NAME.toLowerCase()
+	    TAG= "${BRANCH}-${BUILD_NUMBER}"
+   }
+    options {	
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+        disableConcurrentBuilds()
+        skipDefaultCheckout(false)
+        skipStagesAfterUnstable()
+        timeout(time: 1, unit: 'HOURS')
+    }	
+    stages {
+        stage("Initialize") {
+             steps {		
+                checkPipelineSyntax()
+                prepare()
+             }
+        }
+	  
+       stage("Podman build and push"){
+                  steps {
+                    genericMavenBuildandPodmanPush()
+		    }
+		 }
+        stage('Static Code Analysis and Dependency Check') {
+            failFast true
+            parallel {
+                stage('SonarQube Analysis & Quality Gate') {
+                    steps {
+                        //sonarQubeScanForMaven()
+                        sh "echo 'running sonar for volo' " 
+                    }
+                }
+                
+            }
+        }
+        stage('Create XLD package') {
+            steps {
+                generate_manifest('podman')
+            }
+        }
+        stage('Publish XLD package') {
+            steps {		 
+                PublishXLDPackage()
+            }
+        }   
+        stage('Deploy XLD package to intg') {
+             steps {
+                //DeployXLDPackageToEnv('cloud_unit_rhel8')
+		     xldDeploy environmentId: "Environments/${JOB_NAME}/cloud_intg/cloud_intg", packageId: "Applications/${JOB_NAME}/${JOB_NAME}/${BRANCH}-Build-${BUILD_NUMBER}", rollbackOnError: false, serverCredentials: 's700232'
+             }
+        }
+    }	
+    post {
+        success {
+            //sendNotification("PASSED", JENKINS_NOTIFICATIONS_TO)
+	          echo "Success"
+        }
+        failure {
+            //sendNotification("FAILED", JENKINS_NOTIFICATIONS_TO)
+	          echo "Failure"
+        }
+        always {
+            sh 'printenv'
+            deleteDir()
+        }
+    }
+}
