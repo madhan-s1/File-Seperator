@@ -1,31 +1,103 @@
-(base) [root@dstrlaae9209 log]# cat artemis.log
-2024-06-06 10:05:56,116 INFO  [org.apache.activemq.artemis.core.server] AMQ221038: Configuration option 'master' is deprecated and will be removed in a future version. Use 'primary' instead. Consult the manual for details.
-2024-06-06 10:05:56,439 INFO  [org.apache.activemq.artemis.integration.bootstrap] AMQ101000: Starting ActiveMQ Artemis Server version 2.33.0
-2024-06-06 10:05:56,467 INFO  [org.apache.activemq.artemis.core.server] AMQ221000: Primary message broker is starting with configuration Broker Configuration (clustered=true,journalDirectory=/opt/xl-deploy/share/journal,bindingsDirectory=/opt/xl-deploy/share/bindings,largeMessagesDirectory=/opt/xl-deploy/share/large-messages,pagingDirectory=/opt/xl-deploy/share/paging)
-2024-06-06 10:05:56,468 INFO  [org.apache.activemq.artemis.core.server] AMQ221006: Waiting to obtain primary lock
-2024-06-06 10:05:56,498 INFO  [org.apache.activemq.artemis.core.server] AMQ221012: Using AIO Journal
-2024-06-06 10:05:56,562 INFO  [org.apache.activemq.artemis.core.server] AMQ221057: Global Max Size is being adjusted to 1/2 of the JVM max size (-Xmx). being defined as 1073741824
-2024-06-06 10:05:56,580 ERROR [org.apache.activemq.artemis.core.server] AMQ224000: Failure in initialisation
-java.lang.RuntimeException: couldn't find JGroups configuration xld-jgroups-file_ping.xml
-        at org.apache.activemq.artemis.api.core.JGroupsFileBroadcastEndpoint.createChannel(JGroupsFileBroadcastEndpoint.java:43) ~[artemis-core-client-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.api.core.jgroups.JChannelManager.getJChannel(JChannelManager.java:75) ~[artemis-core-client-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.api.core.JGroupsBroadcastEndpoint.initChannel(JGroupsBroadcastEndpoint.java:119) ~[artemis-core-client-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.api.core.JGroupsFileBroadcastEndpointFactory.createBroadcastEndpoint(JGroupsFileBroadcastEndpointFactory.java:31) ~[artemis-core-client-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.core.server.cluster.impl.BroadcastGroupImpl.<init>(BroadcastGroupImpl.java:91) ~[artemis-server-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.core.server.cluster.ClusterManager.createBroadcastGroup(ClusterManager.java:675) ~[artemis-server-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.core.server.cluster.ClusterManager.deployBroadcastGroup(ClusterManager.java:666) ~[artemis-server-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.core.server.cluster.ClusterManager.deploy(ClusterManager.java:245) ~[artemis-server-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl.initialisePart1(ActiveMQServerImpl.java:3324) ~[artemis-server-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.core.server.impl.SharedStorePrimaryActivation.run(SharedStorePrimaryActivation.java:66) [artemis-server-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl.internalStart(ActiveMQServerImpl.java:738) [artemis-server-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.core.server.impl.ActiveMQServerImpl.start(ActiveMQServerImpl.java:628) [artemis-server-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.integration.FileBroker.start(FileBroker.java:66) [artemis-cli-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.cli.commands.Run.execute(Run.java:130) [artemis-cli-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.cli.Artemis.internalExecute(Artemis.java:221) [artemis-cli-2.33.0.jar:2.33.0]
-        at org.apache.activemq.artemis.cli.Artemis.execute(Artemis.java:167) [artemis-cli-2.33.0.jar:2.33.0]
-        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method) ~[?:?]
-        at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:62) ~[?:?]
-        at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43) ~[?:?]
-        at java.base/java.lang.reflect.Method.invoke(Method.java:566) ~[?:?]
-        at org.apache.activemq.artemis.boot.Artemis.execute(Artemis.java:157) [artemis-boot.jar:2.33.0]
-        at org.apache.activemq.artemis.boot.Artemis.main(Artemis.java:64) [artemis-boot.jar:2.33.0]
+This covers upgrading XLD server (master) on both djaxljes9010 and djaxljes9011 and configuration changes required for the same.   
+
+We upgrade xld in one server and copy the “xldeploy-server” folder to other servers as masters and workers nodes.   
+
+## Steps to perform upgrade in djaxljes9010:
+1. Take backup of xld db before starting with upgrade(sample RITM: RITM3162650)
+2. Stop xl-deploy server and xl-deploy-worker (if applicable) services.   
+   To stop xldeploy server service
+   ```
+   service xl-deploy stop
+   ```
+   To Check status of xldeploy server service
+   ```
+   service xl-deploy status
+   ```
+   To stop xldeploy worker service
+   ```
+   service xl-deploy-worker stop
+   ```
+   To Check status of xldeploy server service
+   ```
+   service xl-deploy-worker status
+   ```
+3. Uninstall xl-deploy server and xl-deploy-worker (if applicable) services.    
+   To uninstall xl-deploy service
+   ```
+   cd {XLDserver-home}/bin
+   ./uninstall-service.sh   
+   ``` 
+   To uninstall xl-deploy-worker service (if applicable)
+   ```
+   cd {XLDworker-home}/bin
+   ./uninstall-service.sh worker  
+   ```   
+   verify the service(s) is removed from ```/etc/init.d/```   
+
+**Note**: At the time of upgrading to v10.0 (LTS version), XLD was at v9.7.5. Below steps from 4-7 are performed to replicate prod environment in unit, we refreshed db data from prod to unit (thru RITM3185457), which can help in detecting any issues that we may face during prod upgrade and this also give real applications available for testing all plugins post the upgrade. These steps are not applicable during prod upgradation. 
+
+4. Renamed server, worker folders(if applicable) to _unitDB9.7.5.
+5. Prod db is replicated to unit db, also have to copy server software from prod server to unit server.
+   ```
+   [root@pmpllaab9218 xl-deploy]# scp -rf xldeploy-server djaxljes9010:/opt/xl-deploy
+   ```
+6. Change prod references for db, artifactory to point to unit instances in configuration files like system.conf, maven.conf, xl-deploy.conf   
+   prod xld db configuration:    
+   ```
+   url = "jdbc:oracle:thin:@xldrp.apptoapp.org:50000/xldrp_Srvc.oracle.db"
+   pool-name = "xldeploy"
+   username = "xldeploy"
+   password = "pCKJMnH#3d3s5GD"
+   ```   
+   Unit xld db configuration:    
+   ```
+   url = "jdbc:oracle:thin:@xldru.unit.apptoapp.org:50001/xldru_Srvc.oracle.db"
+   pool-name = "xldeploy"
+   username = "xldeploy"
+   password = "8?aV%3J6UPw6Ueo"
+   ```
+7. Execute “run.sh” now, which is for verifying whether the prod db data is synched to xld unit db data or not, quick verify the UI, reports, applications. Now we have 8.5 prod environment in unit which can be upgraded to v10.0.   
+    
+Actual upgrade steps are:
+ 
+8. Take backup of existing software by renaming xldeploy-server 8.5 dir to _prod8.5db, assuming that xld services are already stopped and uninstalled.   
+9. Unzip v10.0 xldeploy software zip in ```/opt/xl-deploy/``` as _xldeploy-server_ and update 755 permissions.    
+10. Run the below command from xld-10.0v _xldeploy-server_ folder, it will copy the configuration files like (conf/deployit-license.lic, conf/deployit.conf, conf/deployit-defaults.properties, conf/repository-keystore.jceks, ext) from existing 8.5v software to this location. Below command prompts for user input to enter Yes or No for copying those files/dirs.   
+    ```
+    {xld-home}/xldeploy-server/bin:./run.sh -setup -previous-installation /opt/xl-deloy/xldeploy-server_prod8.5db
+    ```    
+11. copy activemq-artemis-native-1.0.0.jar, activemq-client-5.15.11.jar, ojdbc7-1.0.jar to ```{XLDserver-home}/lib``` from previous installation    
+12. copy xl-keystore.jks, voya-root.pem, zscaler.pem from previous installation to ```{XLDserver-home}/conf```    
+13. In 10.0, multiple conf files (like planner.conf, maven.conf, system.conf, scheduler.conf) are merged together and formed xl-deploy.conf. So applied the configuration changes manually in “xl-deploy.conf. As there is no new changes in deployit-security.xml and logback.xml files when compared to previous versions, directly copied these files to current “conf” folder from old version. Initially we will set ```in-process-worker=yes``` and once worker nodes ready, we can change this property to no and restart xld service(s).    
+14. There is nothing to copy from repository, importablePackages folder of previous installation, skipped copy of these folders.    
+15. Add ```wrapper.java.additional.7=-Djavax.net.ssl.trustStore=conf/xl-keystore.jks``` in ```{XLDserver-home}/conf/xld-wrapper.conf.common```         
+    Note: Prod xld’s other conf files have extra jvm properties added, they have to be taken care during prod upgrade.     
+16. Execute script ```[root@djaxljes9010 /opt/xl-deploy/xldeploy-server/bin]# ./run.sh``` which upgrades repository from 8.5 to 10.0. This takes few min to complete. Once server is up and running, quickly validate UI functionalities.     
+17. To Install xld master as service, run install-service.sh     
+    ```
+    [root@djaxljes9010 bin]# ./install-service.sh
+    Please provide the user that will run XL Deploy: root
+    YAJSW: yajsw-stable-12.14
+    OS   : Linux/3.10.0-1127.19.1.el7.x86_64/amd64
+    JVM  : Red Hat, Inc./1.8.0_275//usr/lib/jvm/java-1.8.0-openjdk-1.8.0.275.b01-0.el7_9.x86_64/jre/64
+    ************* INSTALLING xl-deploy ***********************
+
+    Service xl-deploy installed
+    YAJSW: yajsw-stable-12.14
+    OS   : Linux/3.10.0-1127.19.1.el7.x86_64/amd64
+    JVM  : Red Hat, Inc./1.8.0_275//usr/lib/jvm/java-1.8.0-openjdk-1.8.0.275.b01-0.el7_9.x86_64/jre/64
+    ************* STARTING xl-deploy ***********************
+
+    Service xl-deploy started
+
+    Please make sure the server is configured so that it can start without input from the user
+    (e.g. if a repository keystore password is required then it should be provided in deployit.conf).
+    ```     
+18. Open ```https://djaxljes9010.dsglobal.org:4517/``` and ```https://xld.unit.voya.net/``` in chrome, validate login and UI.   
+## Steps to perform upgrade in djaxljes9011:
+1. Take backup of existing xldeploy-server folder
+2. Stop and uninstall xld services.
+3. Copy xldeploy-server directory from djaxljes9010 to djaxljes9011:/opt/xl-deploy/
+4. Remove ```conf/xl-keystore.jks``` file and copy it from backup as we have different server certs in unit. Note: for prod keystore file is same for both the severs.
+5. As the db repository is already updated, we can directly install xld as service here, run ```{XLDserver-home}/bin/install-service.sh``` script.
+6. Open ```https://djaxljes9011.dsglobal.org:4517/``` and ```https://xld.unit.voya.net/``` in chrome, validate login and UI.
