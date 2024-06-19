@@ -1,103 +1,392 @@
-This covers upgrading XLD server (master) on both djaxljes9010 and djaxljes9011 and configuration changes required for the same.   
+Unit-intg:
 
-We upgrade xld in one server and copy the “xldeploy-server” folder to other servers as masters and workers nodes.   
+$ oc patch Network.operator.openshift.io cluster --type='merge'  --patch '{ "spec": { "migration": {"networkType": "OVNKubernetes" } } }'
+network.operator.openshift.io/cluster patched
+$  oc get Network.config.openshift.io cluster -o yaml
+apiVersion: config.openshift.io/v1
+kind: Network
+metadata:
+  creationTimestamp: "2023-03-28T16:51:14Z"
+  generation: 6
+  name: cluster
+  resourceVersion: "783541364"
+  uid: fac90049-6243-446d-950e-f0f9f45c3853
+spec:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  externalIP:
+    policy: {}
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+status:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  clusterNetworkMTU: 1450
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+$  oc get Network.config.openshift.io cluster -o yaml
+apiVersion: config.openshift.io/v1
+kind: Network
+metadata:
+  creationTimestamp: "2023-03-28T16:51:14Z"
+  generation: 7
+  name: cluster
+  resourceVersion: "783556438"
+  uid: fac90049-6243-446d-950e-f0f9f45c3853
+spec:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  externalIP:
+    policy: {}
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+status:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  clusterNetworkMTU: 1450
+  migration:
+    networkType: OVNKubernetes
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+$ oc get mcp
+NAME          CONFIG                                                  UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
+master        rendered-master-fcbee2c30d30ca5b0d2b67af24e2b059        False     True       False      3              0                   0                     0                      396d
+worker        rendered-worker-fb9e0150a7d81be1e2079a552c0f5bf0        True      False      False      11             11                  11                    0                      396d
+worker-hp     rendered-worker-hp-bdf6703e79c91de547dca2f03380d14c     True      False      False      14             14                  14                    0                      396d
+worker-hp-1   rendered-worker-hp-1-bdf6703e79c91de547dca2f03380d14c   True      False      False      2              2                   2                     0                      254d
+worker-hp-2   rendered-worker-hp-2-bdf6703e79c91de547dca2f03380d14c   True      False      False      14             14                  14                    0                      228d
+$ oc get mcp
+NAME          CONFIG                                                  UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
+master        rendered-master-fcbee2c30d30ca5b0d2b67af24e2b059        False     True       False      3              0                   0                     0                      396d
+worker        rendered-worker-fb9e0150a7d81be1e2079a552c0f5bf0        False     True       False      11             0                   0                     0                      396d
+worker-hp     rendered-worker-hp-bdf6703e79c91de547dca2f03380d14c     False     True       False      14             1                   1                     0                      396d
+worker-hp-1   rendered-worker-hp-1-bdf6703e79c91de547dca2f03380d14c   False     True       False      2              1                   1                     0                      254d
+worker-hp-2   rendered-worker-hp-2-bdf6703e79c91de547dca2f03380d14c   False     True       False      14             1                   1                     0                      228d
+$ watch oc get mcp
+$
+ 
+$ oc get mcp
+NAME          CONFIG                                                  UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
+master        rendered-master-87538e09017739088fe1898bad128660        True      False      False      3              3                   3                     0                      396d
+worker        rendered-worker-4ca3c33a37c6fc6f6afd1057f5918a77        True      False      False      11             11                  11                    0                      396d
+worker-hp     rendered-worker-hp-1d4037fa9ff7e0a482be8c6510843f5f     True      False      False      14             14                  14                    0                      396d
+worker-hp-1   rendered-worker-hp-1-1d4037fa9ff7e0a482be8c6510843f5f   True      False      False      2              2                   2                     0                      254d
+worker-hp-2   rendered-worker-hp-2-1d4037fa9ff7e0a482be8c6510843f5f   True      False      False      14             14                  14                    0                      228d
+$
+$ oc get co
+NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
+authentication                             4.12.37   True        False         False      89s
+baremetal                                  4.12.37   True        False         False      396d
+cloud-controller-manager                   4.12.37   True        False         False      396d
+cloud-credential                           4.12.37   True        False         False      396d
+cluster-autoscaler                         4.12.37   True        False         False      396d
+config-operator                            4.12.37   True        False         False      396d
+console                                    4.12.37   True        False         False      32s
+control-plane-machine-set                  4.12.37   True        False         False      95d
+csi-snapshot-controller                    4.12.37   True        False         False      4h40m
+dns                                        4.12.37   True        False         False      229d
+etcd                                       4.12.37   True        False         False      234d
+image-registry                             4.12.37   True        False         False      52m
+ingress                                    4.12.37   True        False         False      60m
+insights                                   4.12.37   True        False         False      396d
+kube-apiserver                             4.12.37   True        False         False      396d
+kube-controller-manager                    4.12.37   True        False         False      396d
+kube-scheduler                             4.12.37   True        False         False      396d
+kube-storage-version-migrator              4.12.37   True        False         False      37m
+machine-api                                4.12.37   True        False         False      396d
+machine-approver                           4.12.37   True        False         False      396d
+machine-config                             4.12.37   True        False         False      17m
+marketplace                                4.12.37   True        False         False      396d
+monitoring                                 4.12.37   True        False         False      143d
+network                                    4.12.37   True        False         False      395d
+node-tuning                                4.12.37   True        False         False      95d
+openshift-apiserver                        4.12.37   True        False         False      205d
+openshift-controller-manager               4.12.37   True        False         False      95d
+openshift-samples                          4.12.37   True        False         False      95d
+operator-lifecycle-manager                 4.12.37   True        False         False      396d
+operator-lifecycle-manager-catalog         4.12.37   True        False         False      396d
+operator-lifecycle-manager-packageserver   4.12.37   True        False         False      229d
+service-ca                                 4.12.37   True        False         False      396d
+storage                                    4.12.37   True        False         False      67m
+$
 
-## Steps to perform upgrade in djaxljes9010:
-1. Take backup of xld db before starting with upgrade(sample RITM: RITM3162650)
-2. Stop xl-deploy server and xl-deploy-worker (if applicable) services.   
-   To stop xldeploy server service
-   ```
-   service xl-deploy stop
-   ```
-   To Check status of xldeploy server service
-   ```
-   service xl-deploy status
-   ```
-   To stop xldeploy worker service
-   ```
-   service xl-deploy-worker stop
-   ```
-   To Check status of xldeploy server service
-   ```
-   service xl-deploy-worker status
-   ```
-3. Uninstall xl-deploy server and xl-deploy-worker (if applicable) services.    
-   To uninstall xl-deploy service
-   ```
-   cd {XLDserver-home}/bin
-   ./uninstall-service.sh   
-   ``` 
-   To uninstall xl-deploy-worker service (if applicable)
-   ```
-   cd {XLDworker-home}/bin
-   ./uninstall-service.sh worker  
-   ```   
-   verify the service(s) is removed from ```/etc/init.d/```   
+$ oc get nodes
+NAME                                           STATUS   ROLES                AGE    VERSION
+strl-ocp-unit-intg-1-67vfw-infra-7qnw7         Ready    infra,worker         396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-infra-dmwpz         Ready    infra,worker         396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-infra-hb866         Ready    infra,worker         396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-infra-hrtnc         Ready    infra,worker         396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-infra-qnz8x         Ready    infra,worker         396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-master-0            Ready    master               396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-master-1            Ready    master               396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-master-2            Ready    master               396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-1-hk88j      Ready    worker,worker-1      184d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-1-nlcck      Ready    worker,worker-1      184d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-d7zmq        Ready    worker               396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-1-2zgdt   Ready    worker,worker-hp-1   254d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-1-z8t2d   Ready    worker,worker-hp-1   254d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-8njtg   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-cnq9s   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-f4c5s   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-f6x8m   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-fv7p9   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-gkqzf   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-hlzkj   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-jftp7   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-jm4p9   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-lsflp   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-r2q5s   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-rfk5j   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-tgdxl   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-zw6gm   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-nnjd4     Ready    worker,worker-hp     205d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-pcj62     Ready    worker,worker-hp     330d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-q6fvv     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-qbvqm     Ready    worker,worker-hp     228d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-srsk7     Ready    worker,worker-hp     205d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-sz5gj     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-szfg8     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-v6x6z     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-vsn8m     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-w2lfp     Ready    worker,worker-hp     215d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-ww49d     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-wxzsz     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-xtrd7     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-z6jkp     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hrljp        Ready    worker               396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-jfwnm        Ready    worker               318d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-rtwjv        Ready    worker               318d   v1.25.12+ba5cc25
+$
+ 
+$ oc -n openshift-multus rollout status daemonset/multus
+daemon set "multus" successfully rolled out
+$
 
-**Note**: At the time of upgrading to v10.0 (LTS version), XLD was at v9.7.5. Below steps from 4-7 are performed to replicate prod environment in unit, we refreshed db data from prod to unit (thru RITM3185457), which can help in detecting any issues that we may face during prod upgrade and this also give real applications available for testing all plugins post the upgrade. These steps are not applicable during prod upgradation. 
+$ ./reboot_allnodes.sh
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:56 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:56 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:56 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:56 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:56 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:57 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:57 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:57 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:57 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:58 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:58 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:58 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:58 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:59 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:59 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:59 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:16:59 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:00 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:00 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:00 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:00 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:01 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:01 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:01 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:01 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:02 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:02 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:02 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:02 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:03 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:03 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:03 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:03 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:03 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:04 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:04 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:04 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:04 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:05 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:05 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:05 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:05 UTC, use 'shutdown -c' to cancel.
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
+Shutdown scheduled for Sun 2024-04-28 09:17:06 UTC, use 'shutdown -c' to cancel.
 
-4. Renamed server, worker folders(if applicable) to _unitDB9.7.5.
-5. Prod db is replicated to unit db, also have to copy server software from prod server to unit server.
-   ```
-   [root@pmpllaab9218 xl-deploy]# scp -rf xldeploy-server djaxljes9010:/opt/xl-deploy
-   ```
-6. Change prod references for db, artifactory to point to unit instances in configuration files like system.conf, maven.conf, xl-deploy.conf   
-   prod xld db configuration:    
-   ```
-   url = "jdbc:oracle:thin:@xldrp.apptoapp.org:50000/xldrp_Srvc.oracle.db"
-   pool-name = "xldeploy"
-   username = "xldeploy"
-   password = "pCKJMnH#3d3s5GD"
-   ```   
-   Unit xld db configuration:    
-   ```
-   url = "jdbc:oracle:thin:@xldru.unit.apptoapp.org:50001/xldru_Srvc.oracle.db"
-   pool-name = "xldeploy"
-   username = "xldeploy"
-   password = "8?aV%3J6UPw6Ueo"
-   ```
-7. Execute “run.sh” now, which is for verifying whether the prod db data is synched to xld unit db data or not, quick verify the UI, reports, applications. Now we have 8.5 prod environment in unit which can be upgraded to v10.0.   
-    
-Actual upgrade steps are:
+
+$ oc get co
+NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
+authentication                             4.12.37   True        False         False      2m54s
+baremetal                                  4.12.37   True        False         False      396d
+cloud-controller-manager                   4.12.37   True        False         False      396d
+cloud-credential                           4.12.37   True        False         False      396d
+cluster-autoscaler                         4.12.37   True        False         False      396d
+config-operator                            4.12.37   True        False         False      396d
+console                                    4.12.37   True        False         False      11m
+control-plane-machine-set                  4.12.37   True        False         False      95d
+csi-snapshot-controller                    4.12.37   True        False         False      4h56m
+dns                                        4.12.37   True        False         False      229d
+etcd                                       4.12.37   True        False         False      234d
+image-registry                             4.12.37   True        False         False      68m
+ingress                                    4.12.37   True        False         False      113s
+insights                                   4.12.37   True        False         False      396d
+kube-apiserver                             4.12.37   True        False         False      396d
+kube-controller-manager                    4.12.37   True        False         False      396d
+kube-scheduler                             4.12.37   True        False         False      396d
+kube-storage-version-migrator              4.12.37   True        False         False      53m
+machine-api                                4.12.37   True        False         False      396d
+machine-approver                           4.12.37   True        False         False      396d
+machine-config                             4.12.37   True        False         False      33m
+marketplace                                4.12.37   True        False         False      396d
+monitoring                                 4.12.37   True        False         False      143d
+network                                    4.12.37   True        False         False      395d
+node-tuning                                4.12.37   True        False         False      95d
+openshift-apiserver                        4.12.37   True        False         False      205d
+openshift-controller-manager               4.12.37   True        False         False      95d
+openshift-samples                          4.12.37   True        False         False      95d
+operator-lifecycle-manager                 4.12.37   True        False         False      396d
+operator-lifecycle-manager-catalog         4.12.37   True        False         False      396d
+operator-lifecycle-manager-packageserver   4.12.37   True        False         False      229d
+service-ca                                 4.12.37   True        False         False      396d
+storage                                    4.12.37   True        False         False      83m
+$ oc get mcp
+NAME          CONFIG                                                  UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
+master        rendered-master-87538e09017739088fe1898bad128660        True      False      False      3              3                   3                     0                      396d
+worker        rendered-worker-4ca3c33a37c6fc6f6afd1057f5918a77        True      False      False      11             11                  11                    0                      396d
+worker-hp     rendered-worker-hp-1d4037fa9ff7e0a482be8c6510843f5f     True      False      False      14             14                  14                    0                      396d
+worker-hp-1   rendered-worker-hp-1-1d4037fa9ff7e0a482be8c6510843f5f   True      False      False      2              2                   2                     0                      254d
+worker-hp-2   rendered-worker-hp-2-1d4037fa9ff7e0a482be8c6510843f5f   True      False      False      14             14                  14                    0                      228d
+$ oc get nodes
+NAME                                           STATUS   ROLES                AGE    VERSION
+strl-ocp-unit-intg-1-67vfw-infra-7qnw7         Ready    infra,worker         396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-infra-dmwpz         Ready    infra,worker         396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-infra-hb866         Ready    infra,worker         396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-infra-hrtnc         Ready    infra,worker         396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-infra-qnz8x         Ready    infra,worker         396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-master-0            Ready    master               396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-master-1            Ready    master               396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-master-2            Ready    master               396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-1-hk88j      Ready    worker,worker-1      184d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-1-nlcck      Ready    worker,worker-1      184d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-d7zmq        Ready    worker               396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-1-2zgdt   Ready    worker,worker-hp-1   254d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-1-z8t2d   Ready    worker,worker-hp-1   254d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-8njtg   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-cnq9s   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-f4c5s   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-f6x8m   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-fv7p9   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-gkqzf   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-hlzkj   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-jftp7   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-jm4p9   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-lsflp   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-r2q5s   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-rfk5j   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-tgdxl   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-2-zw6gm   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-nnjd4     Ready    worker,worker-hp     205d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-pcj62     Ready    worker,worker-hp     330d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-q6fvv     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-qbvqm     Ready    worker,worker-hp     228d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-srsk7     Ready    worker,worker-hp     205d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-sz5gj     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-szfg8     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-v6x6z     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-vsn8m     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-w2lfp     Ready    worker,worker-hp     215d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-ww49d     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-wxzsz     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-xtrd7     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hp-z6jkp     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-hrljp        Ready    worker               396d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-jfwnm        Ready    worker               318d   v1.25.12+ba5cc25
+strl-ocp-unit-intg-1-67vfw-worker-rtwjv        Ready    worker               318d   v1.25.12+ba5cc25
+$
+Network type is not changed to OVN
+$  oc get Network.config.openshift.io cluster -o yaml
+apiVersion: config.openshift.io/v1
+kind: Network
+metadata:
+  creationTimestamp: "2023-03-28T16:51:14Z"
+  generation: 7
+  name: cluster
+  resourceVersion: "783556438"
+  uid: fac90049-6243-446d-950e-f0f9f45c3853
+spec:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  externalIP:
+    policy: {}
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+status:
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  clusterNetworkMTU: 1450
+  migration:
+    networkType: OVNKubernetes
+  networkType: OpenShiftSDN
+  serviceNetwork:
+  - 172.30.0.0/16
+$
+
+When I cross checked openshift-ovn-kubernetes namespace itself has not created which will hold OVN Daemonset.
+Due to that network switch is not happening from SDN to OVN
+To cross check the application health in cluster I have verified ocpsmhm URL for an app.
+https://vfadata.intg.ocpsmhm.apptoapp.net/vfadata/health
  
-8. Take backup of existing software by renaming xldeploy-server 8.5 dir to _prod8.5db, assuming that xld services are already stopped and uninstalled.   
-9. Unzip v10.0 xldeploy software zip in ```/opt/xl-deploy/``` as _xldeploy-server_ and update 755 permissions.    
-10. Run the below command from xld-10.0v _xldeploy-server_ folder, it will copy the configuration files like (conf/deployit-license.lic, conf/deployit.conf, conf/deployit-defaults.properties, conf/repository-keystore.jceks, ext) from existing 8.5v software to this location. Below command prompts for user input to enter Yes or No for copying those files/dirs.   
-    ```
-    {xld-home}/xldeploy-server/bin:./run.sh -setup -previous-installation /opt/xl-deloy/xldeploy-server_prod8.5db
-    ```    
-11. copy activemq-artemis-native-1.0.0.jar, activemq-client-5.15.11.jar, ojdbc7-1.0.jar to ```{XLDserver-home}/lib``` from previous installation    
-12. copy xl-keystore.jks, voya-root.pem, zscaler.pem from previous installation to ```{XLDserver-home}/conf```    
-13. In 10.0, multiple conf files (like planner.conf, maven.conf, system.conf, scheduler.conf) are merged together and formed xl-deploy.conf. So applied the configuration changes manually in “xl-deploy.conf. As there is no new changes in deployit-security.xml and logback.xml files when compared to previous versions, directly copied these files to current “conf” folder from old version. Initially we will set ```in-process-worker=yes``` and once worker nodes ready, we can change this property to no and restart xld service(s).    
-14. There is nothing to copy from repository, importablePackages folder of previous installation, skipped copy of these folders.    
-15. Add ```wrapper.java.additional.7=-Djavax.net.ssl.trustStore=conf/xl-keystore.jks``` in ```{XLDserver-home}/conf/xld-wrapper.conf.common```         
-    Note: Prod xld’s other conf files have extra jvm properties added, they have to be taken care during prod upgrade.     
-16. Execute script ```[root@djaxljes9010 /opt/xl-deploy/xldeploy-server/bin]# ./run.sh``` which upgrades repository from 8.5 to 10.0. This takes few min to complete. Once server is up and running, quickly validate UI functionalities.     
-17. To Install xld master as service, run install-service.sh     
-    ```
-    [root@djaxljes9010 bin]# ./install-service.sh
-    Please provide the user that will run XL Deploy: root
-    YAJSW: yajsw-stable-12.14
-    OS   : Linux/3.10.0-1127.19.1.el7.x86_64/amd64
-    JVM  : Red Hat, Inc./1.8.0_275//usr/lib/jvm/java-1.8.0-openjdk-1.8.0.275.b01-0.el7_9.x86_64/jre/64
-    ************* INSTALLING xl-deploy ***********************
 
-    Service xl-deploy installed
-    YAJSW: yajsw-stable-12.14
-    OS   : Linux/3.10.0-1127.19.1.el7.x86_64/amd64
-    JVM  : Red Hat, Inc./1.8.0_275//usr/lib/jvm/java-1.8.0-openjdk-1.8.0.275.b01-0.el7_9.x86_64/jre/64
-    ************* STARTING xl-deploy ***********************
+I will create a case to redhat why the OVN namespace is not creating with OVN migration.
 
-    Service xl-deploy started
+ 
 
-    Please make sure the server is configured so that it can start without input from the user
-    (e.g. if a repository keystore password is required then it should be provided in deployit.conf).
-    ```     
-18. Open ```https://djaxljes9010.dsglobal.org:4517/``` and ```https://xld.unit.voya.net/``` in chrome, validate login and UI.   
-## Steps to perform upgrade in djaxljes9011:
-1. Take backup of existing xldeploy-server folder
-2. Stop and uninstall xld services.
-3. Copy xldeploy-server directory from djaxljes9010 to djaxljes9011:/opt/xl-deploy/
-4. Remove ```conf/xl-keystore.jks``` file and copy it from backup as we have different server certs in unit. Note: for prod keystore file is same for both the severs.
-5. As the db repository is already updated, we can directly install xld as service here, run ```{XLDserver-home}/bin/install-service.sh``` script.
-6. Open ```https://djaxljes9011.dsglobal.org:4517/``` and ```https://xld.unit.voya.net/``` in chrome, validate login and UI.
