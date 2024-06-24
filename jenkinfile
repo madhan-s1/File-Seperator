@@ -1,392 +1,59 @@
-Unit-intg:
-
-$ oc patch Network.operator.openshift.io cluster --type='merge'  --patch '{ "spec": { "migration": {"networkType": "OVNKubernetes" } } }'
-network.operator.openshift.io/cluster patched
-$  oc get Network.config.openshift.io cluster -o yaml
-apiVersion: config.openshift.io/v1
-kind: Network
-metadata:
-  creationTimestamp: "2023-03-28T16:51:14Z"
-  generation: 6
-  name: cluster
-  resourceVersion: "783541364"
-  uid: fac90049-6243-446d-950e-f0f9f45c3853
-spec:
-  clusterNetwork:
-  - cidr: 10.128.0.0/14
-    hostPrefix: 23
-  externalIP:
-    policy: {}
-  networkType: OpenShiftSDN
-  serviceNetwork:
-  - 172.30.0.0/16
-status:
-  clusterNetwork:
-  - cidr: 10.128.0.0/14
-    hostPrefix: 23
-  clusterNetworkMTU: 1450
-  networkType: OpenShiftSDN
-  serviceNetwork:
-  - 172.30.0.0/16
-$  oc get Network.config.openshift.io cluster -o yaml
-apiVersion: config.openshift.io/v1
-kind: Network
-metadata:
-  creationTimestamp: "2023-03-28T16:51:14Z"
-  generation: 7
-  name: cluster
-  resourceVersion: "783556438"
-  uid: fac90049-6243-446d-950e-f0f9f45c3853
-spec:
-  clusterNetwork:
-  - cidr: 10.128.0.0/14
-    hostPrefix: 23
-  externalIP:
-    policy: {}
-  networkType: OpenShiftSDN
-  serviceNetwork:
-  - 172.30.0.0/16
-status:
-  clusterNetwork:
-  - cidr: 10.128.0.0/14
-    hostPrefix: 23
-  clusterNetworkMTU: 1450
-  migration:
-    networkType: OVNKubernetes
-  networkType: OpenShiftSDN
-  serviceNetwork:
-  - 172.30.0.0/16
-$ oc get mcp
-NAME          CONFIG                                                  UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
-master        rendered-master-fcbee2c30d30ca5b0d2b67af24e2b059        False     True       False      3              0                   0                     0                      396d
-worker        rendered-worker-fb9e0150a7d81be1e2079a552c0f5bf0        True      False      False      11             11                  11                    0                      396d
-worker-hp     rendered-worker-hp-bdf6703e79c91de547dca2f03380d14c     True      False      False      14             14                  14                    0                      396d
-worker-hp-1   rendered-worker-hp-1-bdf6703e79c91de547dca2f03380d14c   True      False      False      2              2                   2                     0                      254d
-worker-hp-2   rendered-worker-hp-2-bdf6703e79c91de547dca2f03380d14c   True      False      False      14             14                  14                    0                      228d
-$ oc get mcp
-NAME          CONFIG                                                  UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
-master        rendered-master-fcbee2c30d30ca5b0d2b67af24e2b059        False     True       False      3              0                   0                     0                      396d
-worker        rendered-worker-fb9e0150a7d81be1e2079a552c0f5bf0        False     True       False      11             0                   0                     0                      396d
-worker-hp     rendered-worker-hp-bdf6703e79c91de547dca2f03380d14c     False     True       False      14             1                   1                     0                      396d
-worker-hp-1   rendered-worker-hp-1-bdf6703e79c91de547dca2f03380d14c   False     True       False      2              1                   1                     0                      254d
-worker-hp-2   rendered-worker-hp-2-bdf6703e79c91de547dca2f03380d14c   False     True       False      14             1                   1                     0                      228d
-$ watch oc get mcp
-$
- 
-$ oc get mcp
-NAME          CONFIG                                                  UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
-master        rendered-master-87538e09017739088fe1898bad128660        True      False      False      3              3                   3                     0                      396d
-worker        rendered-worker-4ca3c33a37c6fc6f6afd1057f5918a77        True      False      False      11             11                  11                    0                      396d
-worker-hp     rendered-worker-hp-1d4037fa9ff7e0a482be8c6510843f5f     True      False      False      14             14                  14                    0                      396d
-worker-hp-1   rendered-worker-hp-1-1d4037fa9ff7e0a482be8c6510843f5f   True      False      False      2              2                   2                     0                      254d
-worker-hp-2   rendered-worker-hp-2-1d4037fa9ff7e0a482be8c6510843f5f   True      False      False      14             14                  14                    0                      228d
-$
-$ oc get co
-NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
-authentication                             4.12.37   True        False         False      89s
-baremetal                                  4.12.37   True        False         False      396d
-cloud-controller-manager                   4.12.37   True        False         False      396d
-cloud-credential                           4.12.37   True        False         False      396d
-cluster-autoscaler                         4.12.37   True        False         False      396d
-config-operator                            4.12.37   True        False         False      396d
-console                                    4.12.37   True        False         False      32s
-control-plane-machine-set                  4.12.37   True        False         False      95d
-csi-snapshot-controller                    4.12.37   True        False         False      4h40m
-dns                                        4.12.37   True        False         False      229d
-etcd                                       4.12.37   True        False         False      234d
-image-registry                             4.12.37   True        False         False      52m
-ingress                                    4.12.37   True        False         False      60m
-insights                                   4.12.37   True        False         False      396d
-kube-apiserver                             4.12.37   True        False         False      396d
-kube-controller-manager                    4.12.37   True        False         False      396d
-kube-scheduler                             4.12.37   True        False         False      396d
-kube-storage-version-migrator              4.12.37   True        False         False      37m
-machine-api                                4.12.37   True        False         False      396d
-machine-approver                           4.12.37   True        False         False      396d
-machine-config                             4.12.37   True        False         False      17m
-marketplace                                4.12.37   True        False         False      396d
-monitoring                                 4.12.37   True        False         False      143d
-network                                    4.12.37   True        False         False      395d
-node-tuning                                4.12.37   True        False         False      95d
-openshift-apiserver                        4.12.37   True        False         False      205d
-openshift-controller-manager               4.12.37   True        False         False      95d
-openshift-samples                          4.12.37   True        False         False      95d
-operator-lifecycle-manager                 4.12.37   True        False         False      396d
-operator-lifecycle-manager-catalog         4.12.37   True        False         False      396d
-operator-lifecycle-manager-packageserver   4.12.37   True        False         False      229d
-service-ca                                 4.12.37   True        False         False      396d
-storage                                    4.12.37   True        False         False      67m
-$
-
-$ oc get nodes
-NAME                                           STATUS   ROLES                AGE    VERSION
-strl-ocp-unit-intg-1-67vfw-infra-7qnw7         Ready    infra,worker         396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-infra-dmwpz         Ready    infra,worker         396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-infra-hb866         Ready    infra,worker         396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-infra-hrtnc         Ready    infra,worker         396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-infra-qnz8x         Ready    infra,worker         396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-master-0            Ready    master               396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-master-1            Ready    master               396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-master-2            Ready    master               396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-1-hk88j      Ready    worker,worker-1      184d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-1-nlcck      Ready    worker,worker-1      184d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-d7zmq        Ready    worker               396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-1-2zgdt   Ready    worker,worker-hp-1   254d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-1-z8t2d   Ready    worker,worker-hp-1   254d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-8njtg   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-cnq9s   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-f4c5s   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-f6x8m   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-fv7p9   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-gkqzf   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-hlzkj   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-jftp7   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-jm4p9   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-lsflp   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-r2q5s   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-rfk5j   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-tgdxl   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-zw6gm   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-nnjd4     Ready    worker,worker-hp     205d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-pcj62     Ready    worker,worker-hp     330d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-q6fvv     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-qbvqm     Ready    worker,worker-hp     228d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-srsk7     Ready    worker,worker-hp     205d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-sz5gj     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-szfg8     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-v6x6z     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-vsn8m     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-w2lfp     Ready    worker,worker-hp     215d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-ww49d     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-wxzsz     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-xtrd7     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-z6jkp     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hrljp        Ready    worker               396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-jfwnm        Ready    worker               318d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-rtwjv        Ready    worker               318d   v1.25.12+ba5cc25
-$
- 
-$ oc -n openshift-multus rollout status daemonset/multus
-daemon set "multus" successfully rolled out
-$
-
-$ ./reboot_allnodes.sh
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:56 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:56 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:56 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:56 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:56 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:57 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:57 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:57 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:57 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:58 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:58 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:58 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:58 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:59 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:59 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:59 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:16:59 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:00 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:00 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:00 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:00 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:01 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:01 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:01 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:01 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:02 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:02 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:02 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:02 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:03 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:03 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:03 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:03 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:03 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:04 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:04 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:04 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:04 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:05 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:05 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:05 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:05 UTC, use 'shutdown -c' to cancel.
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Defaulted container "machine-config-daemon" out of: machine-config-daemon, oauth-proxy
-Shutdown scheduled for Sun 2024-04-28 09:17:06 UTC, use 'shutdown -c' to cancel.
-
-
-$ oc get co
-NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
-authentication                             4.12.37   True        False         False      2m54s
-baremetal                                  4.12.37   True        False         False      396d
-cloud-controller-manager                   4.12.37   True        False         False      396d
-cloud-credential                           4.12.37   True        False         False      396d
-cluster-autoscaler                         4.12.37   True        False         False      396d
-config-operator                            4.12.37   True        False         False      396d
-console                                    4.12.37   True        False         False      11m
-control-plane-machine-set                  4.12.37   True        False         False      95d
-csi-snapshot-controller                    4.12.37   True        False         False      4h56m
-dns                                        4.12.37   True        False         False      229d
-etcd                                       4.12.37   True        False         False      234d
-image-registry                             4.12.37   True        False         False      68m
-ingress                                    4.12.37   True        False         False      113s
-insights                                   4.12.37   True        False         False      396d
-kube-apiserver                             4.12.37   True        False         False      396d
-kube-controller-manager                    4.12.37   True        False         False      396d
-kube-scheduler                             4.12.37   True        False         False      396d
-kube-storage-version-migrator              4.12.37   True        False         False      53m
-machine-api                                4.12.37   True        False         False      396d
-machine-approver                           4.12.37   True        False         False      396d
-machine-config                             4.12.37   True        False         False      33m
-marketplace                                4.12.37   True        False         False      396d
-monitoring                                 4.12.37   True        False         False      143d
-network                                    4.12.37   True        False         False      395d
-node-tuning                                4.12.37   True        False         False      95d
-openshift-apiserver                        4.12.37   True        False         False      205d
-openshift-controller-manager               4.12.37   True        False         False      95d
-openshift-samples                          4.12.37   True        False         False      95d
-operator-lifecycle-manager                 4.12.37   True        False         False      396d
-operator-lifecycle-manager-catalog         4.12.37   True        False         False      396d
-operator-lifecycle-manager-packageserver   4.12.37   True        False         False      229d
-service-ca                                 4.12.37   True        False         False      396d
-storage                                    4.12.37   True        False         False      83m
-$ oc get mcp
-NAME          CONFIG                                                  UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
-master        rendered-master-87538e09017739088fe1898bad128660        True      False      False      3              3                   3                     0                      396d
-worker        rendered-worker-4ca3c33a37c6fc6f6afd1057f5918a77        True      False      False      11             11                  11                    0                      396d
-worker-hp     rendered-worker-hp-1d4037fa9ff7e0a482be8c6510843f5f     True      False      False      14             14                  14                    0                      396d
-worker-hp-1   rendered-worker-hp-1-1d4037fa9ff7e0a482be8c6510843f5f   True      False      False      2              2                   2                     0                      254d
-worker-hp-2   rendered-worker-hp-2-1d4037fa9ff7e0a482be8c6510843f5f   True      False      False      14             14                  14                    0                      228d
-$ oc get nodes
-NAME                                           STATUS   ROLES                AGE    VERSION
-strl-ocp-unit-intg-1-67vfw-infra-7qnw7         Ready    infra,worker         396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-infra-dmwpz         Ready    infra,worker         396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-infra-hb866         Ready    infra,worker         396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-infra-hrtnc         Ready    infra,worker         396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-infra-qnz8x         Ready    infra,worker         396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-master-0            Ready    master               396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-master-1            Ready    master               396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-master-2            Ready    master               396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-1-hk88j      Ready    worker,worker-1      184d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-1-nlcck      Ready    worker,worker-1      184d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-d7zmq        Ready    worker               396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-1-2zgdt   Ready    worker,worker-hp-1   254d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-1-z8t2d   Ready    worker,worker-hp-1   254d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-8njtg   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-cnq9s   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-f4c5s   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-f6x8m   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-fv7p9   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-gkqzf   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-hlzkj   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-jftp7   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-jm4p9   Ready    worker,worker-hp-2   192d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-lsflp   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-r2q5s   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-rfk5j   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-tgdxl   Ready    worker,worker-hp-2   228d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-2-zw6gm   Ready    worker,worker-hp-2   48d    v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-nnjd4     Ready    worker,worker-hp     205d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-pcj62     Ready    worker,worker-hp     330d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-q6fvv     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-qbvqm     Ready    worker,worker-hp     228d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-srsk7     Ready    worker,worker-hp     205d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-sz5gj     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-szfg8     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-v6x6z     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-vsn8m     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-w2lfp     Ready    worker,worker-hp     215d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-ww49d     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-wxzsz     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-xtrd7     Ready    worker,worker-hp     317d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hp-z6jkp     Ready    worker,worker-hp     396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-hrljp        Ready    worker               396d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-jfwnm        Ready    worker               318d   v1.25.12+ba5cc25
-strl-ocp-unit-intg-1-67vfw-worker-rtwjv        Ready    worker               318d   v1.25.12+ba5cc25
-$
-Network type is not changed to OVN
-$  oc get Network.config.openshift.io cluster -o yaml
-apiVersion: config.openshift.io/v1
-kind: Network
-metadata:
-  creationTimestamp: "2023-03-28T16:51:14Z"
-  generation: 7
-  name: cluster
-  resourceVersion: "783556438"
-  uid: fac90049-6243-446d-950e-f0f9f45c3853
-spec:
-  clusterNetwork:
-  - cidr: 10.128.0.0/14
-    hostPrefix: 23
-  externalIP:
-    policy: {}
-  networkType: OpenShiftSDN
-  serviceNetwork:
-  - 172.30.0.0/16
-status:
-  clusterNetwork:
-  - cidr: 10.128.0.0/14
-    hostPrefix: 23
-  clusterNetworkMTU: 1450
-  migration:
-    networkType: OVNKubernetes
-  networkType: OpenShiftSDN
-  serviceNetwork:
-  - 172.30.0.0/16
-$
-
-When I cross checked openshift-ovn-kubernetes namespace itself has not created which will hold OVN Daemonset.
-Due to that network switch is not happening from SDN to OVN
-To cross check the application health in cluster I have verified ocpsmhm URL for an app.
-https://vfadata.intg.ocpsmhm.apptoapp.net/vfadata/health
- 
-
-I will create a case to redhat why the OVN namespace is not creating with OVN migration.
-
- 
-
+pipeline {
+    agent {
+        label 'DSTRLAAE9201'
+    }
+    options {
+        disableConcurrentBuilds()
+    }
+    parameters { 
+        string(name: 'userid', description: 'Type your user userid', defaultValue: '')
+        string(name: 'password', description: 'Type your user password', defaultValue: '')
+        choice(name: 'cluster',choices: ['accp-1','accp-2'], description: 'What Cluster to get Deployments?')
+        string(name: 'scaled',description: 'Type to scale up|down1|down0', defaultValue: '')
+        choice(name: 'cluster1',choices: ['accp-1','accp-2'], description: 'What Cluster to Scale Deployment?')
+        choice(name: 'action',choices: ['deploymentlist'], description: 'What Operation to perform?')
+    }
+    
+     environment {
+        MYUID = "${params.userid}"
+        PASSW = "${params.password}"
+        CLUSTERNAME = "${params.cluster}"
+        CLUSTERNAMEONE = "${params.cluster1}"
+        SCALED = "${params.scaled}"
+        EMAIL_FROM = 'ShaikSadiq.Basha@voya.com'
+        EMAIL_TO = 'sagar.reddy@voya.com'
+    }   
+    
+    stages {
+//         stage('Approval') {
+//             when {
+//                 expression { params.action == 'deploymentlist' }
+//             }
+//             steps {
+//                 script {
+//                     mail from: "${EMAIL_FROM}", to: "${EMAIL_TO}", subject: "APPROVAL REQUIRED FOR $JOB_NAME" , body: """Openshift ${CLUSTERNAME} cluster pod restart. Please go to $BUILD_URL for more info."""
+//                     def deploymentDelay = input id: 'Deploy', message: "Deploy to Openshift ${CLUSTERNAME} cluster?", parameters: [choice(choices: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'], description: 'Hours to delay deployment?', name: 'deploymentDelay')]
+//                     sleep time: deploymentDelay.toInteger(), unit: 'HOURS'
+//                 }
+//             }
+//         }        
+        stage ("Get_occluster_Deployment") {
+            when {
+                expression { params.action == 'deploymentlist' }
+            }  
+            steps {
+                sh '''
+                   chmod 777 apply_deployment_resultsets.sh get_deployment_resultsets.sh
+                   ./get_deployment_resultsets.sh ${CLUSTERNAME} ${MYUID}
+                   ./apply_deployment_resultsets.sh ${SCALED} ${CLUSTERNAMEONE}
+                '''
+            }
+        }
+    }
+    post {
+        always {
+            //sh 'printenv'
+            deleteDir()
+        }
+    }    
+}
