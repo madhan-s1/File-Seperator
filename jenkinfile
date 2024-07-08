@@ -1,59 +1,90 @@
-pipeline {
-    agent {
-        label 'DSTRLAAE9201'
-    }
-    options {
-        disableConcurrentBuilds()
-    }
-    parameters { 
-        string(name: 'userid', description: 'Type your user userid', defaultValue: '')
-        string(name: 'password', description: 'Type your user password', defaultValue: '')
-        choice(name: 'cluster',choices: ['accp-1','accp-2'], description: 'What Cluster to get Deployments?')
-        string(name: 'scaled',description: 'Type to scale up|down1|down0', defaultValue: '')
-        choice(name: 'cluster1',choices: ['accp-1','accp-2'], description: 'What Cluster to Scale Deployment?')
-        choice(name: 'action',choices: ['deploymentlist'], description: 'What Operation to perform?')
-    }
-    
-     environment {
-        MYUID = "${params.userid}"
-        PASSW = "${params.password}"
-        CLUSTERNAME = "${params.cluster}"
-        CLUSTERNAMEONE = "${params.cluster1}"
-        SCALED = "${params.scaled}"
-        EMAIL_FROM = 'ShaikSadiq.Basha@voya.com'
-        EMAIL_TO = 'sagar.reddy@voya.com'
-    }   
-    
-    stages {
-//         stage('Approval') {
-//             when {
-//                 expression { params.action == 'deploymentlist' }
-//             }
-//             steps {
-//                 script {
-//                     mail from: "${EMAIL_FROM}", to: "${EMAIL_TO}", subject: "APPROVAL REQUIRED FOR $JOB_NAME" , body: """Openshift ${CLUSTERNAME} cluster pod restart. Please go to $BUILD_URL for more info."""
-//                     def deploymentDelay = input id: 'Deploy', message: "Deploy to Openshift ${CLUSTERNAME} cluster?", parameters: [choice(choices: ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24'], description: 'Hours to delay deployment?', name: 'deploymentDelay')]
-//                     sleep time: deploymentDelay.toInteger(), unit: 'HOURS'
-//                 }
-//             }
-//         }        
-        stage ("Get_occluster_Deployment") {
-            when {
-                expression { params.action == 'deploymentlist' }
-            }  
-            steps {
-                sh '''
-                   chmod 777 apply_deployment_resultsets.sh get_deployment_resultsets.sh
-                   ./get_deployment_resultsets.sh ${CLUSTERNAME} ${MYUID}
-                   ./apply_deployment_resultsets.sh ${SCALED} ${CLUSTERNAMEONE}
-                '''
-            }
-        }
-    }
-    post {
-        always {
-            //sh 'printenv'
-            deleteDir()
-        }
-    }    
+#!/bin/sh
+#
+# Shell script to start the XL Deploy Server
+#
+
+absdirname ()
+{
+  _dir="`dirname \"$1\"`"
+  cd "$_dir"
+  echo "`pwd`"
 }
+
+resolvelink() {
+  _dir=`dirname "$1"`
+  _dest=`readlink "$1"`
+  case "$_dest" in
+  /* ) echo "$_dest" ;;
+  *  ) echo "$_dir/$_dest" ;;
+  esac
+}
+
+# Get Java executable
+if [ -z "$JAVA_HOME" ] ; then
+  JAVACMD=java
+else
+  JAVACMD="${JAVA_HOME}/bin/java"
+fi
+JAVA_OPTS="--add-opens=java.base/java.util=ALL-UNNAMED"
+JAVA_OPTS="--add-opens=java.base/java.lang.invoke=ALL-UNNAMED"
+JAVA_OPTS="--add-opens=java.base/java.lang=ALL-UNNAMED"
+
+# Get XL Deploy server home dir
+if [ -z "$DEPLOYIT_SERVER_HOME" ] ; then
+  self="$0"
+  if [ -h "$self" ]; then
+    self=`resolvelink "$self"`
+  fi
+  BIN_DIR=`absdirname "$self"`
+  DEPLOYIT_SERVER_HOME=`dirname "$BIN_DIR"`
+elif [ ! -d "$DEPLOYIT_SERVER_HOME" ] ; then
+  echo "Directory $DEPLOYIT_SERVER_HOME does not exist"
+  exit 1
+fi
+
+cd "$DEPLOYIT_SERVER_HOME"
+
+wrapper_conf_file=$DEPLOYIT_SERVER_HOME/conf/xld-wrapper.conf.common
+
+# Get JVM options
+if [ -z "$DEPLOYIT_SERVER_OPTS" ] ; then
+  DEPLOYIT_SERVER_OPTS=`sed -n 's/^wrapper.java.additional.\([0-9]*\) *= *\(.*\)/\2/p' "$wrapper_conf_file" | tr '\n' ' '`
+fi
+
+# Build XL Deploy server classpath
+classpath_dirs=`sed -n 's/^wrapper.java.classpath.\([0-9]*\)=\(.*[^*]\)$/\2/p' "$wrapper_conf_file" | tr '\n' ':'`
+classpath_dirs=`echo $classpath_dirs | sed 's/.$//'`
+
+DEPLOYIT_SERVER_CLASSPATH="${classpath_dirs}"
+
+all_files_to_list=`sed -n 's/^wrapper.java.classpath.\([0-9]*\)=\(.*\)\/\*$/\2 /p' "$wrapper_conf_file" | tr '\n' ' '`
+all_files_to_list="$all_files_to_list -name '*.jar'"
+all_files=`echo $all_files_to_list | xargs find`
+for each in $all_files
+do
+  if [ -f $each ]; then
+    case "$each" in
+      *.jar)
+        DEPLOYIT_SERVER_CLASSPATH=${DEPLOYIT_SERVER_CLASSPATH}:${each}
+        ;;
+    esac
+  fi
+done
+
+for expandedPluginDir in $all_files
+do
+  if [ -d $expandedPluginDir ]; then
+    DEPLOYIT_SERVER_CLASSPATH=${DEPLOYIT_SERVER_CLASSPATH}:${expandedPluginDir}
+  fi
+done
+
+BOOTSTRAPPER="com.xebialabs.deployit.DeployitBootstrapper"
+if [ "$1" = "worker" ]; then
+    BOOTSTRAPPER="com.xebialabs.deployit.TaskExecutionEngineBootstrapper"
+    shift
+fi
+
+DEPLOYIT_SERVER_OPTS="$DEPLOYIT_SERVER_OPTS $DEPLOYIT_SERVER_OPTS_EXT"
+
+# Run XL Deploy server
+$JAVACMD  -Djsse.enableSNIExtension=false  --add-exports java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED --add-opens java.base/java.nio=ALL-UNNAMED --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.lang.invoke=ALL-UNNAMED --add-opens java.base/sun.security.util=ALL-UNNAMED --add-opens java.base/sun.security.action=ALL-UNNAMED  $DEPLOYIT_SERVER_OPTS -classpath "${DEPLOYIT_SERVER_CLASSPATH}" $BOOTSTRAPPER "$@"
